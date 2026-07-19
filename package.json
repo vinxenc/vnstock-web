@@ -2,6 +2,10 @@
   "name": "vnstock-web",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@9.7.0",
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

@@ -17,6 +17,9 @@ describe("Home page", () => {
 
     expect(
       screen.getByRole("link", { name: /documentation/i }),
-    ).toHaveAttribute("href", expect.stringContaining("nextjs.org/docs"));
+    ).toHaveAttribute(
+      "href",
+      expect.stringMatching(/^https:\/\/nextjs\.org\/docs(?:\?|$)/),
+    );
   });
 });

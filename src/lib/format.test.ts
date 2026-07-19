@@ -2,7 +2,7 @@ import { formatCurrency, formatPercent } from "@/lib/format";
 
 describe("formatCurrency", () => {
   it("formats VND with dot grouping and no decimals", () => {
-    expect(formatCurrency(1_500_000)).toContain("1.500.000");
+    expect(formatCurrency(1_500_000)).toMatch(/^1\.500\.000\s+₫$/);
   });
 
   it("respects a custom currency and locale", () => {
@@ -21,5 +21,9 @@ describe("formatPercent", () => {
 
   it("does not sign zero", () => {
     expect(formatPercent(0)).toBe("0.00%");
+  });
+
+  it("treats values that round to zero as zero", () => {
+    expect(formatPercent(-0.001)).toBe("0.00%");
   });
 });

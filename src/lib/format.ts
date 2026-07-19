@@ -17,6 +17,9 @@ export function formatCurrency(
 
 /** Format a percentage change with an explicit sign, e.g. "+2.50%". */
 export function formatPercent(value: number, fractionDigits = 2): string {
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value.toFixed(fractionDigits)}%`;
+  // Round before choosing the sign so values that round to zero (e.g. -0.001)
+  // are presented like zero rather than "-0.00%".
+  const rounded = Number(value.toFixed(fractionDigits));
+  const sign = rounded > 0 ? "+" : "";
+  return `${sign}${rounded.toFixed(fractionDigits)}%`;
 }
