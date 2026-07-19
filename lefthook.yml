@@ -1,0 +1,25 @@
+# Lefthook config — https://lefthook.dev/configuration/
+#
+# Fast checks run on commit; the unit-test suite runs on push.
+#   pre-commit -> lint (staged files) + type check (whole project)
+#   pre-push   -> unit tests
+#
+# Skip a run when needed with: LEFTHOOK=0 git commit ...
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: lint
+      glob: "*.{js,jsx,ts,tsx,mjs,cjs}"
+      run: pnpm eslint --no-warn-ignored {staged_files}
+
+    - name: typecheck
+      # Gated on staged TS files, but tsc needs the whole project,
+      # so it runs project-wide rather than on {staged_files}.
+      glob: "*.{ts,tsx}"
+      run: pnpm typecheck
+
+pre-push:
+  jobs:
+    - name: test
+      run: pnpm test
