@@ -9,10 +9,9 @@ runs:
     - name: Setup Node
       uses: actions/setup-node@v4
       with:
-        # Node 24.x (Active LTS). Hard floor is 20.12 regardless — vitest 4's
-        # rolldown imports util.styleText, absent on older Node — but the
-        # project targets the 24 line.
-        node-version: "24.x"
+        # Node 24.18.0 (Active LTS line). Hard floor is 20.12 regardless —
+        # vitest 4's rolldown imports util.styleText, absent on older Node.
+        node-version: "24.18.0"
     - name: Restore node_modules cache
       id: cache
       uses: actions/cache@v4
