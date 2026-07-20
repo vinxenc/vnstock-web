@@ -117,7 +117,7 @@ Hooks are installed automatically by the `prepare` script on `pnpm install`.
 
 ```mermaid
 flowchart LR
-  install["📦 install<br/>deps + cache"] --> typecheck["🔎 typecheck<br/>tsc --noEmit"]
+  install["📦 install<br/>deps + cache"] --> typecheck["🔎 typecheck + lint<br/>tsc --noEmit · eslint"]
   typecheck --> unittest["🧪 unittest<br/>vitest run"]
   unittest --> trivy["🛡️ trivy<br/>fs scan"]
 ```

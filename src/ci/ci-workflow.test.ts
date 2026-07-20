@@ -163,6 +163,14 @@ describe("CI Workflow — Commands match package.json scripts (⚠️ edge case)
     expect(typecheckJob).toContain("run: pnpm typecheck");
   });
 
+  it("typecheck job also runs 'pnpm lint'", () => {
+    const typecheckJob = workflowContent.match(
+      /typecheck:[\s\S]*?(?=\n  \w+:|$)/,
+    )?.[0];
+    expect(typecheckJob).toBeDefined();
+    expect(typecheckJob).toContain("run: pnpm lint");
+  });
+
   it("unittest job runs 'pnpm test'", () => {
     const unittestJob = workflowContent.match(
       /unittest:[\s\S]*?(?=\n  \w+:|$)/,
