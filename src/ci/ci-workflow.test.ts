@@ -5,9 +5,13 @@ import { describe, it, expect, beforeAll } from "vitest";
 // Load YAML files as text (no parsing library used, per spec's "no new deps" requirement)
 let workflowContent: string;
 let actionContent: string;
+let packageScripts: Record<string, string>;
 
 beforeAll(() => {
   const projectRoot = process.cwd();
+  packageScripts =
+    JSON.parse(readFileSync(join(projectRoot, "package.json"), "utf-8"))
+      .scripts ?? {};
   workflowContent = readFileSync(
     join(projectRoot, ".github/workflows/ci.yml"),
     "utf-8",
@@ -106,7 +110,7 @@ describe("CI Workflow — pnpm setup ordering (⚠️ edge case)", () => {
 
   it("pnpm/action-setup step has no version input", () => {
     const pnpmStep = actionContent.match(
-      /- name: Install pnpm[\s\S]*?uses: pnpm\/action-setup@v4[\s\S]*?(?=\n    - name:|$)/,
+      /- name: Install pnpm[\s\S]*?uses: pnpm\/action-setup@[0-9a-f]{40}[\s\S]*?(?=\n    - name:|$)/,
     )?.[0];
     expect(pnpmStep).toBeDefined();
     // Verify no "version:" key in the step configuration (not counting comments)
@@ -137,7 +141,7 @@ describe("CI Workflow — Frozen-lockfile install (⚠️ edge case)", () => {
 
 describe("CI Workflow — Commands match package.json scripts (⚠️ edge case)", () => {
   it("typecheck job runs 'pnpm typecheck'", () => {
-    // Extract typecheck job
+    expect(packageScripts).toHaveProperty("typecheck");
     const typecheckJob = workflowContent.match(
       /typecheck:[\s\S]*?(?=\n  \w+:|$)/,
     )?.[0];
@@ -146,6 +150,7 @@ describe("CI Workflow — Commands match package.json scripts (⚠️ edge case)
   });
 
   it("typecheck job also runs 'pnpm lint'", () => {
+    expect(packageScripts).toHaveProperty("lint");
     const typecheckJob = workflowContent.match(
       /typecheck:[\s\S]*?(?=\n  \w+:|$)/,
     )?.[0];
@@ -154,6 +159,7 @@ describe("CI Workflow — Commands match package.json scripts (⚠️ edge case)
   });
 
   it("unittest job runs 'pnpm test'", () => {
+    expect(packageScripts).toHaveProperty("test");
     const unittestJob = workflowContent.match(
       /unittest:[\s\S]*?(?=\n  \w+:|$)/,
     )?.[0];
@@ -189,31 +195,43 @@ describe("CI Workflow — Trivy policy (⚠️ edge case)", () => {
   });
 });
 
-describe("CI Workflow — Action version pinning (⚠️ edge case)", () => {
-  it("actions/checkout is pinned to v4 in workflow", () => {
-    expect(workflowContent).toContain("actions/checkout@v4");
+describe("CI Workflow — Actions pinned to commit SHAs (⚠️ edge case)", () => {
+  it("actions/checkout is pinned to a commit SHA in workflow", () => {
+    expect(workflowContent).toMatch(/actions\/checkout@[0-9a-f]{40}\b/);
   });
 
-  it("pnpm/action-setup is pinned to v4 in composite action", () => {
-    expect(actionContent).toContain("pnpm/action-setup@v4");
+  it("pnpm/action-setup is pinned to a commit SHA in composite action", () => {
+    expect(actionContent).toMatch(/pnpm\/action-setup@[0-9a-f]{40}\b/);
   });
 
-  it("actions/setup-node is pinned to v4 in composite action", () => {
-    expect(actionContent).toContain("actions/setup-node@v4");
+  it("actions/setup-node is pinned to a commit SHA in composite action", () => {
+    expect(actionContent).toMatch(/actions\/setup-node@[0-9a-f]{40}\b/);
   });
 
-  it("trivy-action is pinned to v0.36.0 in workflow", () => {
-    expect(workflowContent).toContain("aquasecurity/trivy-action@v0.36.0");
+  it("trivy-action is pinned to a commit SHA in workflow", () => {
+    expect(workflowContent).toMatch(
+      /aquasecurity\/trivy-action@[0-9a-f]{40}\b/,
+    );
   });
 
-  it("no actions in workflow use @main or @master refs", () => {
-    expect(workflowContent).not.toMatch(/@main\s*$/m);
-    expect(workflowContent).not.toMatch(/@master\s*$/m);
+  it("every third-party action ref is a 40-char commit SHA (no tags)", () => {
+    const externalUses = [
+      ...workflowContent.matchAll(/uses:\s*([^\s#]+)/g),
+      ...actionContent.matchAll(/uses:\s*([^\s#]+)/g),
+    ]
+      .map((m) => m[1])
+      .filter((ref) => !ref.startsWith("./")); // skip local composite actions
+    expect(externalUses.length).toBeGreaterThan(0);
+    for (const ref of externalUses) {
+      expect(ref).toMatch(/@[0-9a-f]{40}$/);
+    }
   });
 
-  it("no actions in composite action use @main or @master refs", () => {
-    expect(actionContent).not.toMatch(/@main\s*$/m);
-    expect(actionContent).not.toMatch(/@master\s*$/m);
+  it("no actions use @main or @master refs", () => {
+    expect(workflowContent).not.toMatch(/@main\b/);
+    expect(workflowContent).not.toMatch(/@master\b/);
+    expect(actionContent).not.toMatch(/@main\b/);
+    expect(actionContent).not.toMatch(/@master\b/);
   });
 });
 

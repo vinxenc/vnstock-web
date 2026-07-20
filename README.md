@@ -26,7 +26,7 @@ A [Next.js](https://nextjs.org) (App Router) web application, bootstrapped with 
 
 ## Architecture
 
-```
+```text
 vnstock-web/
 ├─ .github/
 │  ├─ actions/setup-deps/action.yml   # composite: pnpm + Node 24.18.0 + node_modules cache
@@ -123,8 +123,8 @@ flowchart LR
 ```
 
 - **Dependency reuse:** the `.github/actions/setup-deps` composite action sets up pnpm + Node `24.18.0` and caches the **pnpm store** (via `actions/setup-node`'s `cache: pnpm`, keyed on `pnpm-lock.yaml`), then runs `pnpm install --frozen-lockfile`. Every job restores packages from the warm store instead of re-downloading — and, unlike caching `node_modules` directly, this correctly materializes native optional deps (e.g. rolldown's platform binary that vitest needs).
-- **Security:** least-privilege `permissions: contents: read`; `pull_request` (not `pull_request_target`); Trivy scans the filesystem at `CRITICAL,HIGH` with `exit-code: 1` and `ignore-unfixed: true`, so new high-severity findings fail the check.
-- Concurrency cancels superseded runs; all third-party actions are version-pinned.
+- **Security:** least-privilege `permissions: contents: read`; `persist-credentials: false` on checkout; `pull_request` (not `pull_request_target`); Trivy scans the filesystem at `CRITICAL,HIGH` with `exit-code: 1` and `ignore-unfixed: true` — so the check fails only on HIGH/CRITICAL findings that **have a fix available** (unfixed vulnerabilities are reported but don't fail the build).
+- Concurrency cancels superseded runs; all third-party actions are pinned to commit SHAs (with a `# vX` comment for readability).
 
 ---
 
