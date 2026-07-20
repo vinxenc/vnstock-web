@@ -232,8 +232,8 @@ describe("CI Workflow — Action version pinning (⚠️ edge case)", () => {
 });
 
 describe("CI Workflow — Node version (⚠️ edge case)", () => {
-  it("Node version is exactly 20.9.0", () => {
-    expect(actionContent).toContain('node-version: "20.9.0"');
+  it("Node version is exactly 20.19.0", () => {
+    expect(actionContent).toContain('node-version: "20.19.0"');
   });
 });
 
