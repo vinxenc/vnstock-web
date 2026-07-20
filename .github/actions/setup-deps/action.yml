@@ -1,5 +1,5 @@
 name: Setup dependencies
-description: Install pnpm + Node and restore (or install) node_modules from cache.
+description: Install pnpm + Node with the pnpm store cached, then install dependencies.
 runs:
   using: composite
   steps:
@@ -12,13 +12,12 @@ runs:
         # Node 24.18.0 (Active LTS line). Hard floor is 20.12 regardless —
         # vitest 4's rolldown imports util.styleText, absent on older Node.
         node-version: "24.18.0"
-    - name: Restore node_modules cache
-      id: cache
-      uses: actions/cache@v4
-      with:
-        path: node_modules
-        key: ${{ runner.os }}-node-modules-${{ hashFiles('pnpm-lock.yaml') }}
-    - name: Install dependencies (cache miss only)
-      if: steps.cache.outputs.cache-hit != 'true'
+        # Cache the pnpm store (keyed on pnpm-lock.yaml). Robust for native
+        # optional deps like rolldown's platform binary — unlike caching
+        # node_modules directly, which fails to restore them across jobs.
+        cache: pnpm
+    - name: Install dependencies
       shell: bash
+      # Runs in every job: fast from the warm store (no re-download), and
+      # correctly materializes the platform-native binaries vitest needs.
       run: pnpm install --frozen-lockfile

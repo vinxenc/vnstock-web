@@ -85,17 +85,14 @@ describe("CI Workflow — needs-graph linear chain (⚠️ edge case)", () => {
   });
 });
 
-describe("CI Workflow — Composite cache key correctness (⚠️ edge case)", () => {
-  it("cache key includes hashFiles('pnpm-lock.yaml')", () => {
-    expect(actionContent).toContain("hashFiles('pnpm-lock.yaml')");
+describe("CI Workflow — Dependency caching (⚠️ edge case)", () => {
+  it("caches the pnpm store via actions/setup-node (cache: pnpm)", () => {
+    expect(actionContent).toMatch(/cache:\s*pnpm/);
   });
 
-  it("cache path is node_modules", () => {
-    expect(actionContent).toMatch(/path:\s*node_modules/);
-  });
-
-  it("cache key includes runner.os", () => {
-    expect(actionContent).toContain("${{ runner.os }}");
+  it("does not cache node_modules directly (native-binding footgun)", () => {
+    expect(actionContent).not.toContain("actions/cache@v4");
+    expect(actionContent).not.toMatch(/path:\s*node_modules/);
   });
 });
 
@@ -123,11 +120,7 @@ describe("CI Workflow — pnpm setup ordering (⚠️ edge case)", () => {
 });
 
 describe("CI Workflow — Composite shell declaration (⚠️ edge case)", () => {
-  it("fallback install step declares shell: bash", () => {
-    expect(actionContent).toContain(
-      "if: steps.cache.outputs.cache-hit != 'true'",
-    );
-    // Find the install step and verify it has shell: bash
+  it("install step declares shell: bash", () => {
     const installStep = actionContent.match(
       /- name: Install dependencies[\s\S]*?(?=\n    - name:|$)/,
     )?.[0];
@@ -136,20 +129,9 @@ describe("CI Workflow — Composite shell declaration (⚠️ edge case)", () =>
   });
 });
 
-describe("CI Workflow — Cross-job cache miss fallback (⚠️ edge case)", () => {
+describe("CI Workflow — Frozen-lockfile install (⚠️ edge case)", () => {
   it("install command uses --frozen-lockfile", () => {
-    expect(actionContent).toContain("--frozen-lockfile");
-  });
-
-  it("install is guarded by cache-hit check", () => {
-    expect(actionContent).toContain(
-      "if: steps.cache.outputs.cache-hit != 'true'",
-    );
-    // Verify the condition and command are in the same step
-    const fallbackSection = actionContent.match(
-      /if: steps\.cache\.outputs\.cache-hit[\s\S]*?run:[\s\S]*?--frozen-lockfile/,
-    )?.[0];
-    expect(fallbackSection).toBeDefined();
+    expect(actionContent).toContain("pnpm install --frozen-lockfile");
   });
 });
 
@@ -218,10 +200,6 @@ describe("CI Workflow — Action version pinning (⚠️ edge case)", () => {
 
   it("actions/setup-node is pinned to v4 in composite action", () => {
     expect(actionContent).toContain("actions/setup-node@v4");
-  });
-
-  it("actions/cache is pinned to v4 in composite action", () => {
-    expect(actionContent).toContain("actions/cache@v4");
   });
 
   it("trivy-action is pinned to 0.28.0 in workflow", () => {
