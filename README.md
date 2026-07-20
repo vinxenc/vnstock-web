@@ -20,7 +20,7 @@ A [Next.js](https://nextjs.org) (App Router) web application, bootstrapped with 
 | Linter | **ESLint** + `eslint-config-next` | `^9` / `16.2.10` |
 | Testing | **Vitest** + **Testing Library** + **jsdom** | `^4.1.10` |
 | Git hooks | **Lefthook** | `^2.1.10` |
-| CI security scan | **Trivy** (`aquasecurity/trivy-action`) | `@0.28.0` |
+| CI security scan | **Trivy** (`aquasecurity/trivy-action`) | `@v0.36.0` |
 
 ---
 

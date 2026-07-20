@@ -202,8 +202,8 @@ describe("CI Workflow — Action version pinning (⚠️ edge case)", () => {
     expect(actionContent).toContain("actions/setup-node@v4");
   });
 
-  it("trivy-action is pinned to 0.28.0 in workflow", () => {
-    expect(workflowContent).toContain("aquasecurity/trivy-action@0.28.0");
+  it("trivy-action is pinned to v0.36.0 in workflow", () => {
+    expect(workflowContent).toContain("aquasecurity/trivy-action@v0.36.0");
   });
 
   it("no actions in workflow use @main or @master refs", () => {
