@@ -37,6 +37,7 @@ vnstock-web/
 │  └─ settings.json                   # permission allowlist for dev commands
 ├─ src/
 │  ├─ app/                            # Next.js App Router — layout.tsx, page.tsx, globals.css
+│  ├─ components/                     # app shell, thread-list sidebar, chat, CopilotKit provider
 │  ├─ lib/                            # framework-agnostic utilities (+ colocated *.test.ts)
 │  └─ ci/                             # structural tests that assert the CI workflow is correct
 ├─ biome.json                         # formatter config (linter + CSS formatting disabled)
@@ -152,6 +153,60 @@ flowchart LR
 - Handoff files in `.pipeline/` are regenerated per run and are git-ignored.
 
 This CI workflow itself was built by that pipeline.
+
+---
+
+## AI chat (CopilotKit + AG-UI)
+
+The home page (`/`) is a full-page chat UI powered by **CopilotKit** and an
+**AG-UI (Agent-User Interaction)** backend.
+
+### Architecture
+
+```
+Browser
+  └─ <ThreadStoreProvider>              (localStorage thread registry — no CopilotKit)
+       └─ <AppShell>                    (row layout + mobile drawer — no CopilotKit)
+            ├─ <Sidebar/>               (thread list + "New chat" — no CopilotKit)
+            └─ <CopilotProvider key={threadId} threadId={threadId}>
+                 └─ <CopilotChat/>  ──POST──►  /api/copilotkit  (Next.js route handler)
+                                                  └─ CopilotRuntime + HttpAgent  ──►  AG-UI backend
+```
+
+The browser never calls the AG-UI server directly; it posts to the same-origin
+`/api/copilotkit` route, which proxies to the backend via `HttpAgent`.
+
+### Chat threads
+
+Thread metadata (`id`, `title`, `createdAt`, `updatedAt`) is stored in
+`localStorage` under the key `vnstock-web.threads.v1`. Threads are sorted
+most-recent-first. The active thread's id is passed as
+`<CopilotProvider key={threadId} threadId={threadId}>` — the `key` prop forces a
+full React remount on every thread switch, which is the only safe mechanism
+in this version of CopilotKit (1.63.1) because in-place `threadId` mutation
+leaves the previous thread's messages on screen while the backend receives a
+different id.
+
+**Limitation:** switching to a past thread opens an **empty chat pane**. The
+`HttpAgent` from `@ag-ui/client@0.0.57` does not implement `connect()` (it
+throws `AGUIConnectNotImplementedError`), so there is no way to fetch a
+thread's message history from the backend. If the backend is stateful, the
+assistant still retains context server-side, but the visible transcript is
+not restored. This is a known limitation of the current library versions and
+is surfaced to the user via a one-line hint in the sidebar.
+
+### Environment variable
+
+| Variable | Scope | Default | Description |
+|---|---|---|---|
+| `AG_UI_BACKEND_URL` | Server only | `http://127.0.0.1:7933` | URL of the AG-UI backend. Server-side only (no `NEXT_PUBLIC_` prefix). Copy `.env.example` to `.env.local` to override. |
+
+### Running locally with the AG-UI backend
+
+1. Copy the example env file: `cp .env.example .env.local` (optional — default points to `127.0.0.1:7933`).
+2. Start the AG-UI backend so it listens on `http://127.0.0.1:7933` (or set `AG_UI_BACKEND_URL`).
+3. `pnpm dev` — open [http://localhost:3000](http://localhost:3000) and send a message.
+4. Network traffic goes to `/api/copilotkit` (same origin); the backend URL stays server-side.
 
 ---
 

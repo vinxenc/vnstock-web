@@ -1,26 +1,105 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Light palette matching @copilotkit/react-core/dist/v2/index.css */
+  --background: oklch(100% 0 0);
+  --foreground: oklch(14.5% 0 0);
+  --card: oklch(100% 0 0);
+  --card-foreground: oklch(14.5% 0 0);
+  --primary: oklch(20.5% 0 0);
+  --primary-foreground: oklch(98.5% 0 0);
+  --muted: oklch(97% 0 0);
+  --muted-foreground: oklch(55.6% 0 0);
+  --accent: oklch(97% 0 0);
+  --accent-foreground: oklch(20.5% 0 0);
+  --destructive: oklch(57.7% 0.245 27.325);
+  --border: oklch(92.2% 0 0);
+  --input: oklch(92.2% 0 0);
+  --ring: oklch(70.8% 0 0);
+  --radius: 0.625rem;
+  /* Not in CopilotKit's palette — used by the drawer's launcher shadow. */
+  --destructive-bg: #fef2f2;
+  --destructive-border: #fecaca;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -1px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05);
+  /* Drawer geometry — CopilotKit --cpk-* names. */
+  --cpk-drawer-width: 320px;
+  --cpk-drawer-reserved-width: 320px;
+  --cpk-radius: min(var(--radius), 4px); /* styles.mjs:81-85 */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* CopilotKit canonical dark palette, same names */
+    --background: oklch(14.5% 0 0);
+    --foreground: oklch(98.5% 0 0);
+    --card: oklch(14.5% 0 0);
+    --card-foreground: oklch(98.5% 0 0);
+    --primary: oklch(98.5% 0 0);
+    --primary-foreground: oklch(20.5% 0 0);
+    --muted: oklch(26.9% 0 0);
+    --muted-foreground: oklch(70.8% 0 0);
+    --accent: oklch(26.9% 0 0);
+    --accent-foreground: oklch(98.5% 0 0);
+    --destructive: oklch(39.6% 0.141 25.723);
+    --border: oklch(26.9% 0 0);
+    --input: oklch(26.9% 0 0);
+    --ring: oklch(55.6% 0 0);
+    --destructive-bg: #7f1d1d;
+    --destructive-border: #dc2626;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -1px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -2px rgb(0 0 0 / 0.3);
+  }
+}
+
+/* CopilotKit v2 keys dark mode off a `.dark` ancestor
+   (`.dark [data-copilotkit]` in @copilotkit/react-core/dist/v2/index.css).
+   The class is set by COLOR_SCHEME_BOOTSTRAP_SCRIPT / <ColorSchemeSync>.
+   These duplicate the media-query values so both paths agree. */
+html.dark {
+  --background: oklch(14.5% 0 0);
+  --foreground: oklch(98.5% 0 0);
+  --card: oklch(14.5% 0 0);
+  --card-foreground: oklch(98.5% 0 0);
+  --primary: oklch(98.5% 0 0);
+  --primary-foreground: oklch(20.5% 0 0);
+  --muted: oklch(26.9% 0 0);
+  --muted-foreground: oklch(70.8% 0 0);
+  --accent: oklch(26.9% 0 0);
+  --accent-foreground: oklch(98.5% 0 0);
+  --destructive: oklch(39.6% 0.141 25.723);
+  --border: oklch(26.9% 0 0);
+  --input: oklch(26.9% 0 0);
+  --ring: oklch(55.6% 0 0);
+  --destructive-bg: #7f1d1d;
+  --destructive-border: #dc2626;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -1px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -2px rgb(0 0 0 / 0.05);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
