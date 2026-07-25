@@ -1,25 +1,20 @@
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
 import Home from "./page";
 
-describe("Home page", () => {
-  it("renders the getting-started heading", () => {
-    render(<Home />);
+// Mock the Chat component
+vi.mock("@/components/chat", () => ({
+  Chat: () => <div data-testid="chat-component">Chat Surface</div>,
+}));
 
-    expect(
-      screen.getByRole("heading", {
-        name: /to get started, edit the page\.tsx file/i,
-      }),
-    ).toBeInTheDocument();
+describe("Home page", () => {
+  it("renders the Chat component", () => {
+    const { getByTestId } = render(<Home />);
+    expect(getByTestId("chat-component")).toBeInTheDocument();
   });
 
-  it("links to the documentation", () => {
-    render(<Home />);
-
-    expect(
-      screen.getByRole("link", { name: /documentation/i }),
-    ).toHaveAttribute(
-      "href",
-      expect.stringMatching(/^https:\/\/nextjs\.org\/docs(?:\?|$)/),
-    );
+  it("displays chat surface with correct text", () => {
+    const { getByText } = render(<Home />);
+    expect(getByText("Chat Surface")).toBeInTheDocument();
   });
 });

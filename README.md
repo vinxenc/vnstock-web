@@ -37,6 +37,7 @@ vnstock-web/
 │  └─ settings.json                   # permission allowlist for dev commands
 ├─ src/
 │  ├─ app/                            # Next.js App Router — layout.tsx, page.tsx, globals.css
+│  ├─ components/                     # app shell, thread-list sidebar, chat, CopilotKit provider
 │  ├─ lib/                            # framework-agnostic utilities (+ colocated *.test.ts)
 │  └─ ci/                             # structural tests that assert the CI workflow is correct
 ├─ biome.json                         # formatter config (linter + CSS formatting disabled)
@@ -152,6 +153,60 @@ flowchart LR
 - Handoff files in `.pipeline/` are regenerated per run and are git-ignored.
 
 This CI workflow itself was built by that pipeline.
+
+---
+
+## AI chat (CopilotKit + AG-UI)
+
+The home page (`/`) is a full-page chat UI powered by **CopilotKit** and an
+**AG-UI (Agent-User Interaction)** backend.
+
+### Architecture
+
+```text
+Browser
+  └─ <ColorSchemeSync>                  (syncs html.dark for dark mode)
+  └─ <ChatShell>                        (grid layout + mobile drawer)
+       └─ <CopilotProvider>             (CopilotKitProvider + CopilotChatConfigurationProvider)
+            ├─ <ThreadsDrawer/>          (thread list via native useThreads / setActiveThreadId)
+            └─ <CopilotChat/>  ──►  /api/copilotkit/[[...slug]]  (Next.js route handler)
+                                          └─ CopilotSseRuntime + HttpAgent  ──►  AG-UI backend
+```
+
+The browser never calls the AG-UI server directly; it posts to the same-origin
+`/api/copilotkit` route, which proxies to the backend via `HttpAgent`.
+
+### Chat threads
+
+Threads come from the CopilotKit v2 runtime, not the browser. The route handler
+builds a `CopilotSseRuntime` with the default `InMemoryAgentRunner`, which
+exposes the thread endpoints (`GET /threads`, `/agent/:id/connect`). The drawer
+lists them with the native `useThreads` hook and switches with
+`setActiveThreadId(id, { explicit: true })` — the `explicit` flag makes
+`CopilotChat` issue `/agent/:id/connect`, which replays that thread's history
+from the runner. No `key`-based remount is used; v2 handles the in-place
+`threadId` change and swallows detach rejections on cleanup.
+
+**Persistence:** history lives in the runtime **process memory**. It is retained
+across thread switches while the server is running, but is **cleared on
+restart** and is not shared across multiple server instances — the sidebar
+surfaces this with a one-line hint. A persistent, user-scoped runner would be
+required for durable, multi-instance history. (The end-to-end message round-trip
+is covered by manual verification against a live backend; the in-browser replay
+of a previously-opened thread is not yet covered by an automated test.)
+
+### Environment variable
+
+| Variable | Scope | Default | Description |
+|---|---|---|---|
+| `AG_UI_BACKEND_URL` | Server only | `http://127.0.0.1:7933` | URL of the AG-UI backend. Server-side only (no `NEXT_PUBLIC_` prefix). Copy `.env.example` to `.env.local` to override. |
+
+### Running locally with the AG-UI backend
+
+1. Copy the example env file: `cp .env.example .env.local` (optional — default points to `127.0.0.1:7933`).
+2. Start the AG-UI backend so it listens on `http://127.0.0.1:7933` (or set `AG_UI_BACKEND_URL`).
+3. `pnpm dev` — open [http://localhost:3000](http://localhost:3000) and send a message.
+4. Network traffic goes to `/api/copilotkit` (same origin); the backend URL stays server-side.
 
 ---
 
