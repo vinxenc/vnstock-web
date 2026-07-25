@@ -233,12 +233,17 @@ describe("ThreadsDrawer (v2) — keyboard & a11y", () => {
     items[0].focus();
     fireEvent.keyDown(list, { key: "ArrowDown" });
     expect(items[1]).toHaveFocus();
+    // The tab stop follows focus: the newly focused row becomes tabindex 0.
+    expect(items[1]).toHaveAttribute("tabindex", "0");
+    expect(items[0]).toHaveAttribute("tabindex", "-1");
     fireEvent.keyDown(list, { key: "End" });
     expect(items[2]).toHaveFocus();
+    expect(items[2]).toHaveAttribute("tabindex", "0");
     fireEvent.keyDown(list, { key: "ArrowUp" });
     expect(items[1]).toHaveFocus();
     fireEvent.keyDown(list, { key: "Home" });
     expect(items[0]).toHaveFocus();
+    expect(items[0]).toHaveAttribute("tabindex", "0");
   });
 
   it("marks the off-canvas panel inert when closed on mobile, interactive when open", () => {

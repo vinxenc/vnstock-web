@@ -5,7 +5,7 @@ import {
   useCopilotChatConfiguration,
   useThreads,
 } from "@copilotkit/react-core/v2";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AG_UI_AGENT_NAME } from "@/lib/copilotkit";
 import { formatThreadLabel, isUntitledThread } from "@/lib/thread-label";
 import { useIsMobile } from "./use-is-mobile";
@@ -127,7 +127,9 @@ export function ThreadsDrawer({
   );
 
   // Roving-tabindex arrow-key navigation for the listbox (ARIA APG pattern):
-  // the list is a single Tab stop; Up/Down/Home/End move focus between options.
+  // the list is a single Tab stop; Up/Down/Home/End move focus between options,
+  // and the focused option becomes the tab stop so Tab re-enters the last row.
+  const [focusedThreadId, setFocusedThreadId] = useState<string | null>(null);
   const handleListKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLUListElement>) => {
       const options = Array.from(
@@ -152,7 +154,9 @@ export function ThreadsDrawer({
           return;
       }
       e.preventDefault();
-      options[next]?.focus();
+      const target = options[next];
+      target?.focus();
+      setFocusedThreadId(target?.dataset.threadId ?? null);
     },
     [],
   );
@@ -198,7 +202,17 @@ export function ThreadsDrawer({
       </p>
     );
   } else {
-    const hasActiveThread = threads.some((t) => t.id === activeThreadId);
+    // The single tab stop follows the last arrow-navigated row (when it still
+    // exists), otherwise the active thread, otherwise the first row.
+    const focusedExists =
+      focusedThreadId != null && threads.some((t) => t.id === focusedThreadId);
+    const tabStopId =
+      (focusedExists ? focusedThreadId : null) ??
+      (activeThreadId && threads.some((t) => t.id === activeThreadId)
+        ? activeThreadId
+        : null) ??
+      threads[0]?.id ??
+      null;
     listBody = (
       <ul
         role="listbox"
@@ -207,12 +221,12 @@ export function ThreadsDrawer({
         className="flex flex-col gap-1"
         onKeyDown={handleListKeyDown}
       >
-        {threads.map((thread, index) => {
+        {threads.map((thread) => {
           const active = thread.id === activeThreadId;
           const unnamed = isUntitledThread(thread);
-          // Roving tabindex: the active row (or the first, when none is active)
-          // is the single Tab stop; the rest are reachable via arrow keys.
-          const tabStop = active || (!hasActiveThread && index === 0);
+          // Roving tabindex: exactly one row is the Tab stop; the rest are
+          // reachable via arrow keys.
+          const tabStop = thread.id === tabStopId;
           return (
             <li
               key={thread.id}

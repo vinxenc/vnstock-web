@@ -178,22 +178,22 @@ The browser never calls the AG-UI server directly; it posts to the same-origin
 
 ### Chat threads
 
-Thread metadata (`id`, `title`, `createdAt`, `updatedAt`) is stored in
-`localStorage` under the key `vnstock-web.threads.v1`. Threads are sorted
-most-recent-first. The active thread's id is passed as
-`<CopilotProvider key={threadId} threadId={threadId}>` — the `key` prop forces a
-full React remount on every thread switch, which is the only safe mechanism
-in this version of CopilotKit (1.63.1) because in-place `threadId` mutation
-leaves the previous thread's messages on screen while the backend receives a
-different id.
+Threads come from the CopilotKit v2 runtime, not the browser. The route handler
+builds a `CopilotSseRuntime` with the default `InMemoryAgentRunner`, which
+exposes the thread endpoints (`GET /threads`, `/agent/:id/connect`). The drawer
+lists them with the native `useThreads` hook and switches with
+`setActiveThreadId(id, { explicit: true })` — the `explicit` flag makes
+`CopilotChat` issue `/agent/:id/connect`, which replays that thread's history
+from the runner. No `key`-based remount is used; v2 handles the in-place
+`threadId` change and swallows detach rejections on cleanup.
 
-**Limitation:** switching to a past thread opens an **empty chat pane**. The
-`HttpAgent` from `@ag-ui/client@0.0.57` does not implement `connect()` (it
-throws `AGUIConnectNotImplementedError`), so there is no way to fetch a
-thread's message history from the backend. If the backend is stateful, the
-assistant still retains context server-side, but the visible transcript is
-not restored. This is a known limitation of the current library versions and
-is surfaced to the user via a one-line hint in the sidebar.
+**Persistence:** history lives in the runtime **process memory**. It is retained
+across thread switches while the server is running, but is **cleared on
+restart** and is not shared across multiple server instances — the sidebar
+surfaces this with a one-line hint. A persistent, user-scoped runner would be
+required for durable, multi-instance history. (The end-to-end message round-trip
+is covered by manual verification against a live backend; the in-browser replay
+of a previously-opened thread is not yet covered by an automated test.)
 
 ### Environment variable
 
