@@ -27,9 +27,12 @@ vi.mock("@copilotkit/react-core/v2", () => ({
 }));
 
 // Desktop by default so the panel is a static region, not a dialog.
-vi.mock("./use-is-mobile", () => ({ useIsMobile: () => false }));
+// Mutable so individual tests can exercise the mobile off-canvas path.
+let isMobileValue = false;
+vi.mock("./use-is-mobile", () => ({ useIsMobile: () => isMobileValue }));
 
 function resetHooks(): void {
+  isMobileValue = false;
   threadsReturn = {
     threads: [],
     isLoading: false,
@@ -98,6 +101,16 @@ describe("ThreadsDrawer (v2) — list states", () => {
     expect(active).toHaveAttribute("aria-selected", "true");
     const inactive = items.find((el) => el.dataset.threadId === "t1");
     expect(inactive).toHaveAttribute("data-active", "false");
+  });
+
+  it("marks an untitled thread (blank title) with data-unnamed and italic name", () => {
+    threadsReturn.threads = [{ id: "abcdef1234" }];
+    renderDrawer();
+    expect(screen.getByTestId("thread-item")).toHaveAttribute(
+      "data-unnamed",
+      "true",
+    );
+    expect(screen.getByTestId("thread-name")).toHaveClass("italic");
   });
 });
 
@@ -175,5 +188,70 @@ describe("ThreadsDrawer (v2) — chrome", () => {
     expect(screen.getByTestId("drawer-agent-name")).toHaveTextContent(
       "vnstock_agent",
     );
+  });
+});
+
+describe("ThreadsDrawer (v2) — keyboard & a11y", () => {
+  it("uses roving tabindex: only the active row is a tab stop", () => {
+    threadsReturn.threads = [
+      { id: "t1", title: "First" },
+      { id: "t2", title: "Second" },
+      { id: "t3", title: "Third" },
+    ];
+    configReturn!.threadId = "t2";
+    renderDrawer();
+    const byId = (id: string) =>
+      screen
+        .getAllByTestId("thread-item")
+        .find((el) => el.dataset.threadId === id)!;
+    expect(byId("t2")).toHaveAttribute("tabindex", "0");
+    expect(byId("t1")).toHaveAttribute("tabindex", "-1");
+    expect(byId("t3")).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("falls back to the first row as the tab stop when none is active", () => {
+    threadsReturn.threads = [
+      { id: "t1", title: "First" },
+      { id: "t2", title: "Second" },
+    ];
+    configReturn!.threadId = null;
+    renderDrawer();
+    const items = screen.getAllByTestId("thread-item");
+    expect(items[0]).toHaveAttribute("tabindex", "0");
+    expect(items[1]).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("moves focus between rows with ArrowDown/ArrowUp/Home/End", () => {
+    threadsReturn.threads = [
+      { id: "t1", title: "First" },
+      { id: "t2", title: "Second" },
+      { id: "t3", title: "Third" },
+    ];
+    renderDrawer();
+    const list = screen.getByTestId("thread-list");
+    const items = screen.getAllByTestId("thread-item");
+    items[0].focus();
+    fireEvent.keyDown(list, { key: "ArrowDown" });
+    expect(items[1]).toHaveFocus();
+    fireEvent.keyDown(list, { key: "End" });
+    expect(items[2]).toHaveFocus();
+    fireEvent.keyDown(list, { key: "ArrowUp" });
+    expect(items[1]).toHaveFocus();
+    fireEvent.keyDown(list, { key: "Home" });
+    expect(items[0]).toHaveFocus();
+  });
+
+  it("marks the off-canvas panel inert when closed on mobile, interactive when open", () => {
+    isMobileValue = true;
+    const { rerender } = renderDrawer({ isOpen: false });
+    expect(screen.getByTestId("threads-drawer")).toHaveAttribute("inert");
+    rerender(
+      <ThreadsDrawer
+        isOpen={true}
+        onOpenChange={vi.fn()}
+        isCollapsed={false}
+      />,
+    );
+    expect(screen.getByTestId("threads-drawer")).not.toHaveAttribute("inert");
   });
 });

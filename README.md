@@ -163,14 +163,14 @@ The home page (`/`) is a full-page chat UI powered by **CopilotKit** and an
 
 ### Architecture
 
-```
+```text
 Browser
-  └─ <ThreadStoreProvider>              (localStorage thread registry — no CopilotKit)
-       └─ <AppShell>                    (row layout + mobile drawer — no CopilotKit)
-            ├─ <Sidebar/>               (thread list + "New chat" — no CopilotKit)
-            └─ <CopilotProvider key={threadId} threadId={threadId}>
-                 └─ <CopilotChat/>  ──POST──►  /api/copilotkit  (Next.js route handler)
-                                                  └─ CopilotRuntime + HttpAgent  ──►  AG-UI backend
+  └─ <ColorSchemeSync>                  (syncs html.dark for dark mode)
+  └─ <ChatShell>                        (grid layout + mobile drawer)
+       └─ <CopilotProvider>             (CopilotKitProvider + CopilotChatConfigurationProvider)
+            ├─ <ThreadsDrawer/>          (thread list via native useThreads / setActiveThreadId)
+            └─ <CopilotChat/>  ──►  /api/copilotkit/[[...slug]]  (Next.js route handler)
+                                          └─ CopilotSseRuntime + HttpAgent  ──►  AG-UI backend
 ```
 
 The browser never calls the AG-UI server directly; it posts to the same-origin

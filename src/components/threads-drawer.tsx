@@ -17,7 +17,7 @@ export interface ThreadsDrawerProps {
   /** Desktop collapse state. Ignored visually below 768px. Default false. */
   readonly isCollapsed?: boolean;
   readonly onCollapsedChange?: (collapsed: boolean) => void;
-  /** aria-label + header text. Default "Threads". */
+  /** Accessible name for the drawer region/dialog (aria-label). Default "Threads". */
   readonly label?: string;
   /** Section heading above the list. Default "Recent Conversations". */
   readonly recentLabel?: string;
@@ -126,6 +126,37 @@ export function ThreadsDrawer({
     [configuration, onOpenChange],
   );
 
+  // Roving-tabindex arrow-key navigation for the listbox (ARIA APG pattern):
+  // the list is a single Tab stop; Up/Down/Home/End move focus between options.
+  const handleListKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLUListElement>) => {
+      const options = Array.from(
+        e.currentTarget.querySelectorAll<HTMLElement>('[role="option"]'),
+      );
+      const current = options.indexOf(document.activeElement as HTMLElement);
+      let next: number;
+      switch (e.key) {
+        case "ArrowDown":
+          next = current < 0 ? 0 : Math.min(current + 1, options.length - 1);
+          break;
+        case "ArrowUp":
+          next = current <= 0 ? 0 : current - 1;
+          break;
+        case "Home":
+          next = 0;
+          break;
+        case "End":
+          next = options.length - 1;
+          break;
+        default:
+          return;
+      }
+      e.preventDefault();
+      options[next]?.focus();
+    },
+    [],
+  );
+
   // List body — exactly one of: error, loading, empty, or list (spec §6.2 pt.8).
   let listBody: React.JSX.Element;
   if (listError) {
@@ -167,16 +198,21 @@ export function ThreadsDrawer({
       </p>
     );
   } else {
+    const hasActiveThread = threads.some((t) => t.id === activeThreadId);
     listBody = (
       <ul
         role="listbox"
         aria-label={label}
         data-testid="thread-list"
         className="flex flex-col gap-1"
+        onKeyDown={handleListKeyDown}
       >
-        {threads.map((thread) => {
+        {threads.map((thread, index) => {
           const active = thread.id === activeThreadId;
           const unnamed = isUntitledThread(thread);
+          // Roving tabindex: the active row (or the first, when none is active)
+          // is the single Tab stop; the rest are reachable via arrow keys.
+          const tabStop = active || (!hasActiveThread && index === 0);
           return (
             <li
               key={thread.id}
@@ -187,7 +223,7 @@ export function ThreadsDrawer({
               data-unnamed={unnamed ? "true" : undefined}
               data-thread-id={thread.id}
               title={formatThreadLabel(thread)}
-              tabIndex={0}
+              tabIndex={tabStop ? 0 : -1}
               onClick={() => handleSelectThread(thread.id)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
@@ -219,6 +255,10 @@ export function ThreadsDrawer({
     );
   }
 
+  // Off-canvas and hidden on mobile: exclude the whole panel from focus and the
+  // a11y tree (the desktop-collapsed path already does this via `md:hidden`).
+  const offscreen = isMobile && !isOpen;
+
   return (
     <>
       {/* 1. Backdrop — only when open on mobile */}
@@ -236,6 +276,7 @@ export function ThreadsDrawer({
       <aside
         id="threads-drawer"
         data-testid="threads-drawer"
+        inert={offscreen || undefined}
         role={isMobile && isOpen ? "dialog" : "region"}
         aria-modal={isMobile && isOpen ? true : undefined}
         aria-label={label}
